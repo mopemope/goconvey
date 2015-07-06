@@ -40,6 +40,7 @@ func flags() {
 	flag.IntVar(&depth, "depth", -1, "The directory scanning depth. If -1, scan infinitely deep directory structures. 0: scan working directory. 1+: Scan into nested directories, limited to value. (default: -1)")
 	flag.StringVar(&timeout, "timeout", "5s", "The test execution timeout if none is specified in the *.goconvey file (default: 5s).")
 	flag.StringVar(&watchedSuffixes, "watchedSuffixes", ".go", "A comma separated list of file suffixes to watch for modifications (default: .go).")
+	flag.StringVar(&workDir, "workDir", "", "set goconvey working directory (default current directory)")
 
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -55,9 +56,16 @@ func main() {
 	flag.Parse()
 	log.Printf(initialConfiguration, host, port, nap, cover)
 
-	working, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
+	working := ""
+	var err error
+
+	if workDir != "" {
+		working = workDir
+	} else {
+		working, err = os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	cover = coverageEnabled(cover, reports)
@@ -159,10 +167,18 @@ func goVersion_1_2_orGreater() bool {
 	return true
 }
 func coverToolInstalled() bool {
-	working, err := os.Getwd()
-	if err != nil {
-		working = "."
+	working := ""
+	var err error
+
+	if workDir != "" {
+		working = workDir
+	} else {
+		working, err = os.Getwd()
+		if err != nil {
+			working = "."
+		}
 	}
+
 	command := system.NewCommand(working, "go", "tool", "cover").Execute()
 	installed := strings.Contains(command.Output, "Usage of 'go tool cover':")
 	if !installed {
@@ -209,6 +225,7 @@ var (
 	reports string
 
 	quarterSecond = time.Millisecond * 250
+	workDir       string
 )
 
 const (
